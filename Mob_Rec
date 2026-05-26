@@ -1,0 +1,218 @@
+import pandas as pd
+import numpy as np
+
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+df = pd.read_csv(
+    "Mobile Reviews Sentiment null.csv"
+)
+
+df.columns = (
+    df.columns
+    .str.lower()
+    .str.strip()
+    .str.replace(" ", "_")
+)
+
+df.drop_duplicates(inplace=True)
+
+drop_cols = [
+    'review_id',
+    'customer_name',
+    'price_local',
+    'currency'
+]
+
+df.drop(
+    columns=drop_cols,
+    inplace=True,
+    errors='ignore'
+)
+
+df['source'] = df['source'].replace(
+    ['nan', 'None', ''],
+    np.nan
+)
+
+df = df.dropna(subset=['source'])
+
+df['price_usd'] = pd.to_numeric(
+    df['price_usd'],
+    errors='coerce'
+)
+
+df['price_usd'] = df['price_usd'].fillna(
+    df['price_usd'].median()
+)
+
+rating_cols = [
+    'battery_life_rating',
+    'camera_rating',
+    'performance_rating',
+    'design_rating',
+    'display_rating'
+]
+
+for col in rating_cols:
+
+    df[col] = pd.to_numeric(
+        df[col],
+        errors='coerce'
+    )
+
+df['rating'] = pd.to_numeric(
+    df['rating'],
+    errors='coerce'
+)
+
+df['rating'] = df['rating'].fillna(
+    df[rating_cols]
+    .mean(axis=1)
+    .round()
+)
+
+df['rating'] = df['rating'].fillna(
+    df['rating'].median()
+)
+
+df.loc[
+    (df['sentiment'].isnull()) &
+    (df['rating'] >= 4),
+    'sentiment'
+] = 'Positive'
+
+df.loc[
+    (df['sentiment'].isnull()) &
+    (df['rating'] == 3),
+    'sentiment'
+] = 'Neutral'
+
+df.loc[
+    (df['sentiment'].isnull()) &
+    (df['rating'] <= 2),
+    'sentiment'
+] = 'Negative'
+
+df['sentiment'] = df['sentiment'].fillna(
+    df['sentiment'].mode()[0]
+)
+
+df['review_date'] = pd.to_datetime(
+    df['review_date'],
+    errors='coerce'
+)
+
+df['review_year'] = (
+    df['review_date'].dt.year
+)
+
+df['review_month'] = (
+    df['review_date'].dt.month
+)
+
+le = LabelEncoder()
+
+encode_cols = [
+    'brand',
+    'verified_purchase',
+    'sentiment',
+    'source'
+]
+
+for col in encode_cols:
+
+    df[col] = le.fit_transform(
+        df[col].astype(str)
+    )
+
+features = [
+    'price_usd',
+    'rating',
+    'battery_life_rating',
+    'camera_rating',
+    'performance_rating',
+    'design_rating',
+    'display_rating',
+    'helpful_votes'
+]
+
+X = df[features]
+
+X = X.fillna(
+    X.median(numeric_only=True)
+)
+
+scaler = StandardScaler()
+
+X_scaled = scaler.fit_transform(X)
+
+kmeans = KMeans(
+    n_clusters=3,
+    random_state=42,
+    n_init=10
+)
+
+df['cluster'] = kmeans.fit_predict(
+    X_scaled
+)
+
+score = silhouette_score(
+    X_scaled,
+    df['cluster']
+)
+
+print("\nSilhouette Score:")
+print(score)
+
+def recommend_mobile(
+    source,
+    max_price,
+    min_rating
+):
+
+    filtered_df = df[
+        df['source'] == source
+    ]
+
+    if filtered_df.empty:
+
+        return (
+            "No mobiles found "
+            "for selected source"
+        )
+
+    recommendations = filtered_df[
+        (filtered_df['price_usd'] <= max_price) &
+        (filtered_df['rating'] >= min_rating)
+    ]
+
+    if recommendations.empty:
+
+        return (
+            "No matching mobiles found"
+        )
+
+    recommendations = recommendations.sort_values(
+        by=['rating', 'price_usd'],
+        ascending=[False, True]
+    )
+
+    return recommendations[
+        [
+            'model',
+            'brand',
+            'price_usd',
+            'rating',
+            'cluster'
+        ]
+    ].head(10)
+
+df.to_csv(
+    "cleaned_mobile_clustered_data.csv",
+    index=False
+)
+
+print("\nDONE & DUSTED")
