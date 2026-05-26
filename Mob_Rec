@@ -37,14 +37,18 @@ df['source'] = df['source'].replace(
     np.nan
 )
 
-df = df.dropna(subset=['source'])
+df = df.dropna(
+    subset=['source']
+)
 
 df['price_usd'] = pd.to_numeric(
     df['price_usd'],
     errors='coerce'
 )
 
-df['price_usd'] = df['price_usd'].fillna(
+df['price_usd'] = df[
+    'price_usd'
+].fillna(
     df['price_usd'].median()
 )
 
@@ -74,7 +78,9 @@ df['rating'] = df['rating'].fillna(
     .round()
 )
 
-df['rating'] = df['rating'].fillna(
+df['rating'] = df[
+    'rating'
+].fillna(
     df['rating'].median()
 )
 
@@ -96,7 +102,9 @@ df.loc[
     'sentiment'
 ] = 'Negative'
 
-df['sentiment'] = df['sentiment'].fillna(
+df['sentiment'] = df[
+    'sentiment'
+].fillna(
     df['sentiment'].mode()[0]
 )
 
@@ -204,6 +212,7 @@ def recommend_mobile(
         [
             'model',
             'brand',
+            'source',
             'price_usd',
             'rating',
             'cluster'
