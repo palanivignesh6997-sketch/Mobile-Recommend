@@ -62,8 +62,7 @@ if max_price < 0:
 elif max_price > 100000:
 
     st.warning(
-        "Very high price entered "
-        "(possible outlier)"
+        "Very high price entered"
     )
 
 if st.button(
