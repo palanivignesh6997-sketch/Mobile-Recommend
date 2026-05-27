@@ -121,6 +121,12 @@ df['review_month'] = (
     df['review_date'].dt.month
 )
 
+df['brand_name'] = df['brand']
+
+df['source_name'] = df['source']
+
+df['model_name'] = df['model']
+
 le = LabelEncoder()
 
 encode_cols = [
@@ -175,21 +181,118 @@ score = silhouette_score(
 print("\nSilhouette Score:")
 print(score)
 
+print("\nCLUSTER VS BRAND\n")
+
+cluster_brand = (
+    df.groupby(
+        ['cluster', 'brand_name']
+    )
+    .size()
+    .reset_index(name='count')
+    .sort_values(
+        ['cluster', 'count'],
+        ascending=[True, False]
+    )
+)
+
+print(cluster_brand)
+
+print("\nCLUSTER VS SOURCE\n")
+
+cluster_source = (
+    df.groupby(
+        ['cluster', 'source_name']
+    )
+    .size()
+    .reset_index(name='count')
+    .sort_values(
+        ['cluster', 'count'],
+        ascending=[True, False]
+    )
+)
+
+print(cluster_source)
+
+print("\nCLUSTER VS MODEL\n")
+
+cluster_model = (
+    df.groupby(
+        ['cluster', 'model_name']
+    )
+    .size()
+    .reset_index(name='count')
+    .sort_values(
+        ['cluster', 'count'],
+        ascending=[True, False]
+    )
+)
+
+print(cluster_model)
+
+print("\nCLUSTER FEATURE ANALYSIS\n")
+
+cluster_analysis = (
+    df.groupby('cluster')[
+        [
+            'price_usd',
+            'rating',
+            'battery_life_rating',
+            'camera_rating',
+            'performance_rating',
+            'design_rating',
+            'display_rating',
+            'helpful_votes'
+        ]
+    ]
+    .mean()
+    .round(2)
+)
+
+print(cluster_analysis)
+
+print("\nCLUSTER RATING DISTRIBUTION\n")
+
+cluster_rating = (
+    df.groupby(
+        ['cluster', 'rating']
+    )
+    .size()
+    .reset_index(name='count')
+)
+
+print(cluster_rating)
+
+print("\nCLUSTER SUMMARY\n")
+
+print(
+    df.groupby('cluster')[
+        [
+            'rating',
+            'price_usd'
+        ]
+    ]
+    .agg(
+        ['mean', 'median', 'min', 'max']
+    )
+)
+
 def recommend_mobile(
     source,
+    brand,
     max_price,
     min_rating
 ):
 
     filtered_df = df[
-        df['source'] == source
+        (df['source'] == source) &
+        (df['brand'] == brand)
     ]
 
     if filtered_df.empty:
 
         return (
             "No mobiles found "
-            "for selected source"
+            "for selected source and brand"
         )
 
     recommendations = filtered_df[
